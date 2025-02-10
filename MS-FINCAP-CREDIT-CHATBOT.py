@@ -3,13 +3,6 @@ import google.generativeai as genai
 import base64
 import os
 from dotenv import load_dotenv
-import pandas as pd
-from datetime import datetime
-import gspread
-from google.oauth2.service_account import Credentials
-
-# Load environment variables from the .env file
-load_dotenv()
 
 # Configure API Key
 API_KEY = st.secrets["API_KEY"]
@@ -18,109 +11,6 @@ if not API_KEY:
     st.error("API Key is missing. Please check your Streamlit secrets.")
     st.stop()
 
-genai.configure(api_key=API_KEY)
-
-# Google Sheets Authentication
-def authenticate_google_sheets():
-    """Authenticate with Google Sheets using service account credentials."""
-    credentials = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], 
-        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"]
-    )
-    client = gspread.authorize(credentials)
-    return client
-
-# Function to get or create the Google Spreadsheet for login records
-def get_or_create_spreadsheet(client):
-    """Get or create the Google Spreadsheet to store login records."""
-    try:
-        # Attempt to open the existing spreadsheet
-        spreadsheet = client.open("Chatbot_Login_Records")
-    except gspread.exceptions.SpreadsheetNotFound:
-        # If not found, create a new spreadsheet
-        spreadsheet = client.create("Chatbot_Login_Records")
-    return spreadsheet
-
-
-# Function to load login records from Google Sheets
-def load_login_records():
-    """Load login records from the Google Spreadsheet."""
-    client = authenticate_google_sheets()
-    spreadsheet = get_or_create_spreadsheet(client)
-    worksheet = spreadsheet.sheet1
-    try:
-        data = worksheet.get_all_records()
-        df = pd.DataFrame(data)
-        print(f"Loaded records: {df}")  # Debugging line
-    except gspread.exceptions.APIError as e:
-        print(f"Error loading records: {e}")
-        df = pd.DataFrame(columns=['Name', 'Employee_ID', 'Login_Time'])
-    return df
-
-# Function to save login record into Google Spreadsheet
-  # Function to save login record into Google Spreadsheet
-def save_login_record(name, emp_id):
-    """Save a new login record into the Google Spreadsheet."""
-    client = authenticate_google_sheets()
-    spreadsheet = get_or_create_spreadsheet(client)
-    worksheet = spreadsheet.sheet1
-    new_record = ["Test User", "12345", datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
-    print(f"Appending record: {new_record}")
-    try:
-        worksheet.append_row(new_record)
-    except Exception as e:
-        print(f"Error saving record: {e}")
-
-
-# Login page CSS
-def load_login_css():
-    st.markdown("""
-        <style>
-        .login-container {
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: rgba(30, 30, 30, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        .login-header {
-            text-align: center;
-            color: #BB86FC;
-            margin-bottom: 30px;
-        }
-        .login-input {
-            background-color: #2C2C2C;
-            color: white;
-            border: 1px solid #BB86FC;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 15px;
-        }
-        .login-button {
-            background-color: #BB86FC;
-            color: black;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .company-logo {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            max-width: 150px;
-        }
-        .main-title {
-            text-align: center;
-            color: #BB86FC;
-            font-size: 2.5em;
-            margin: 20px 0;
-            padding-top: 20px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
 # Load the Credit Policy Markdown file
 def load_credit_policy(file_path):
@@ -170,11 +60,11 @@ def ask_gemini(question, credit_policy_text):
     response = model.generate_content(prompt)
     return response.text if response else "Sorry, I couldn't generate a response."
 
-# Function to Load Custom CSS
+# Enhanced CSS with modern design elements
 def load_css():
-    """Creates and loads custom CSS for dark theme."""
+    """Creates and loads custom CSS for modern dark theme."""
     css_content = """
-    /* Dark Theme for Credit Policy Chatbot */
+    /* Modern Dark Theme for Credit Policy Chatbot */
     :root {
         --background-dark: #121212;
         --background-light: #1E1E1E;
@@ -183,6 +73,8 @@ def load_css():
         --accent-color: #BB86FC;
         --user-message-bg: #2C2C2C;
         --bot-message-bg: #1E1E1E;
+        --gradient-primary: linear-gradient(135deg, #BB86FC 0%, #9C27B0 100%);
+        --gradient-secondary: linear-gradient(135deg, #3a1c71, #d76d77, #ffaf7b);
     }
 
     /* Global Styles */
@@ -191,198 +83,268 @@ def load_css():
         color: var(--text-primary) !important;
     }
 
-    /* Sidebar Styles */
-    .css-1aumxhk {
-        background-color: var(--background-light) !important;
-    }
-
     /* Main Title */
     .main-title {
-        color: var(--accent-color) !important;
+        background: var(--gradient-secondary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
-        font-size: 2.5em;
-        margin-bottom: 20px;
-        text-shadow: 2px 2px 4px rgba(187, 134, 252, 0.3);
+        font-size: 2.8em;
+        margin: 30px 0;
+        font-weight: 700;
+        letter-spacing: 1px;
+        animation: titleGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes titleGlow {
+        0%, 100% { text-shadow: 0 0 30px rgba(187, 134, 252, 0.3); }
+        50% { text-shadow: 0 0 50px rgba(187, 134, 252, 0.5); }
     }
 
     /* Chat Messages */
     .user-message, .bot-message {
         color: var(--text-primary) !important;
-        padding: 12px;
-        border-radius: 10px;
-        margin-bottom: 12px;
-        max-width: 80%;
-        line-height: 1.5;
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 15px;
+        max-width: 85%;
+        line-height: 1.6;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+        animation: fadeIn 0.3s ease-in;
+        position: relative;
     }
 
     .user-message {
-        background-color: var(--user-message-bg) !important;
+        background: var(--gradient-secondary) !important;
         align-self: flex-end;
         margin-left: auto;
-        border-bottom-right-radius: 0;
+        border-bottom-right-radius: 5px;
     }
 
     .bot-message {
-        background-color: var(--bot-message-bg) !important;
+        background: linear-gradient(145deg, #1E1E1E, #2C2C2C) !important;
+        border: 1px solid rgba(187, 134, 252, 0.3);
         align-self: flex-start;
         margin-right: auto;
-        border-bottom-left-radius: 0;
+        border-bottom-left-radius: 5px;
     }
 
-    /* Input Styles */
-    .stTextInput > div > div > input {
-        color: var(--text-primary) !important;
-        background-color: var(--background...
-        border: 1px solid var(--text-secondary) !important;
+    /* Message Icons */
+    .message-icon {
+        position: absolute;
+        top: -10px;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-    /* Markdown and Text Styles */
-    .stMarkdown,
-    .stMarkdown p,
-    .stMarkdown span,
-    .stMarkdown h1,
-    .stMarkdown h2,
-    .stMarkdown h3 {
-        color: var(--text-primary) !important;
+    .user-icon {
+        right: -10px;
+        background: var(--gradient-secondary);
     }
 
-    /* Button Styles */
-    .stButton > button {
-        color: var(--text-primary) !important;
-        background-color: var(--accent-color) !important;
-        border: none !important;
+    .bot-icon {
+        left: -10px;
+        background: var(--gradient-primary);
     }
 
-    /* Select Box Styles */
+    /* Enhanced Select Box with Full Visibility Fix */
+    .stSelectbox {
+        margin-bottom: 20px;
+    }
+
     .stSelectbox > div > div {
         background-color: var(--background-light) !important;
         color: var(--text-primary) !important;
+        border: 2px solid var(--accent-color) !important;
+        border-radius: 12px !important;
+        min-height: 45px !important;
+        padding: 5px 10px !important;
+        width: 100% !important;
+        position: relative;
+        z-index: 1;
     }
 
-    /* Spinner and Other Elements */
-    .stSpinner > div {
-        border-color: var(--accent-color) transparent transparent transparent !important;
+    .stSelectbox > div > div > div {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
+        align-items: center;
+        min-height: 45px;
+    }
+
+    div[data-baseweb="popover"] {
+        background-color: var(--background-light) !important;
+        border: 2px solid var(--accent-color) !important;
+        border-radius: 12px !important;
+        margin-top: 5px;
+    }
+
+    div[data-baseweb="popover"] ul {
+        background-color: var(--background-light) !important;
+        padding: 5px !important;
+    }
+
+    div[data-baseweb="popover"] li {
+        color: var(--text-primary) !important;
+        padding: 10px !important;
+        border-radius: 8px !important;
+        transition: background-color 0.2s ease;
+    }
+
+    div[data-baseweb="popover"] li:hover {
+        background-color: rgba(187, 134, 252, 0.2) !important;
+    }
+
+    div[data-baseweb="popover"] li[aria-selected="true"] {
+        background-color: rgba(187, 134, 252, 0.3) !important;
+    }
+
+    /* Input Field */
+    .stTextInput > div > div > input {
+        color: var(--text-primary) !important;
+        background-color: var(--background-light) !important;
+        border: 2px solid var(--accent-color) !important;
+        border-radius: 10px !important;
+        padding: 12px !important;
+        transition: all 0.3s ease;
+    }
+
+    .stTextInput > div > div > input:focus {
+        box-shadow: 0 0 10px rgba(187, 134, 252, 0.5) !important;
+    }
+
+    /* Enhanced Button Styles */
+    .stButton > button {
+        background: var(--gradient-primary) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 30px !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3) !important;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(187, 134, 252, 0.4) !important;
+    }
+
+    /* Sidebar */
+    .sidebar-content {
+        padding: 20px;
+        background: rgba(30, 30, 30, 0.9);
+        border-radius: 15px;
+        margin: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 1px solid rgba(187, 134, 252, 0.1);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     """
-    css_file = "dark_theme_styles.css"
-    if not os.path.exists(css_file):
-        with open(css_file, "w") as f:
-            f.write(css_content)
-
-    with open(css_file) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    st.markdown(f'<style>{css_content}</style>', unsafe_allow_html=True)
 
 # Main Streamlit App
 def main():
     st.set_page_config(
-        page_title="MS FINCAP - Credit Policy Assistant",
-        page_icon="💳",
+        page_title="Credit Policy Assistant",
+        page_icon="✨",
         layout="wide"
     )
 
     # Load CSS
     load_css()
-    load_login_css()
 
-    # Session state for login
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
+    # Try to set background
+    set_background("background.png")
 
-    # Display logo
-    st.image("msfincap.png", width=200)
+    # Display logo and title
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("msfincap.png", width=250)
+        st.markdown("<h1 class='main-title'>✨ Credit Policy Assistant</h1>", unsafe_allow_html=True)
 
-    # Display main title
-    st.markdown("<h1 class='main-title'>🏦 MS FINCAP YOUR FINANCIAL NAVIGATOR</h1>", unsafe_allow_html=True)
+    # Sidebar with enhanced UI
+    with st.sidebar:
+        st.markdown("<div class='sidebar-content'>", unsafe_allow_html=True)
+        st.header("🎯 Chat Controls")
 
-    if not st.session_state.logged_in:
-        # Login page
-        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
-        st.markdown("<h2 class='login-header'>Login</h2>", unsafe_allow_html=True)
-        
-        name = st.text_input("Name", key="login_name")
-        emp_id = st.text_input("Employee ID", key="login_emp_id")
-        
-        if st.button("Login", key="login_button"):
-            if name and emp_id:
-                save_login_record(name, emp_id)
-                st.session_state.logged_in = True
-                st.session_state.user_name = name
-                st.session_state.user_emp_id = emp_id
-                st.rerun()
-            else:
-                st.error("Please enter both Name and Employee ID")
+        # Enhanced select box with better visibility
+        mode = st.selectbox(
+            "💫 Conversation Mode",
+            options=["Standard", "Detailed", "Concise"],
+            index=0,
+            help="Choose how detailed you want the responses to be",
+            key="conversation_mode"
+        )
+
+        if st.button("🔮 Reset Conversation"):
+            st.session_state.messages = []
+            st.rerun()
         
         st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        # Try to set background
-        set_background("background.png")
 
-        # Sidebar
-        with st.sidebar:
-            st.header("🔍 Chat Controls")
+    # Load credit policy
+    credit_policy_text = load_credit_policy("Credit_Policy2.md")
 
-            # Conversation Mode Selector
-            mode = st.selectbox(
-                "Conversation Mode",
-                ["Standard", "Detailed", "Concise"],
-                help="Choose how detailed you want the responses to be"
-            )
+    # Initialize chat history
+    if 'messages' not in st.session_state:
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": "✨ Hello! I'm your Credit Policy Assistant. How can I help you today?"
+            }
+        ]
 
-            # Clear Chat History
-            if st.button("🔄 Reset Conversation"):
-                st.session_state.messages = []
-                st.rerun()
-
-            # Logout Button
-            if st.button("📤 Logout"):
-                st.session_state.logged_in = False
-                st.session_state.messages = []
-                st.rerun()
-
-        # Load credit policy
-        credit_policy_text = load_credit_policy("Credit_Policy2.md")
-
-        # Initialize chat history
-        if 'messages' not in st.session_state:
-            st.session_state.messages = [
-                {
-                    "role": "assistant",
-                    "content": f"Hello {st.session_state.user_name}! I'm your Credit Policy Assistant. How can I help you today?"
-                }
-            ]
-
-        # Display chat messages
+    # Chat container
+    chat_container = st.container()
+    
+    with chat_container:
         for message in st.session_state.messages:
             if message["role"] == "user":
-                st.markdown(f"<div class='user-message'><strong>You:</strong> {message['content']}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"""<div class='user-message'>
+                        <div class='message-icon user-icon'>👤</div>
+                        <strong>You:</strong> {message['content']}
+                    </div>""", 
+                    unsafe_allow_html=True
+                )
             else:
-                st.markdown(f"<div class='bot-message'><strong>Credit Policy Bot:</strong> {message['content']}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"""<div class='bot-message'>
+                        <div class='message-icon bot-icon'>🤖</div>
+                        <strong>Assistant:</strong> {message['content']}
+                    </div>""", 
+                    unsafe_allow_html=True
+                )
 
-        # Chat input
-        user_query = st.chat_input("Ask about the credit policy...")
+    # Chat input
+    user_query = st.chat_input("💭 Ask about the credit policy...")
 
-        # Process user input
-        if user_query:
-            st.session_state.messages.append({"role": "user", "content": user_query})
+    if user_query:
+        st.session_state.messages.append({"role": "user", "content": user_query})
 
-            # Adjust response based on mode
-            additional_prompt = {
-                "Concise": " Please provide a very brief and to-the-point answer.",
-                "Detailed": " Please provide a comprehensive and detailed explanation.",
-                "Standard": ""
-            }.get(mode, "")
+        additional_prompt = {
+            "Concise": " Please provide a very brief and to-the-point answer.",
+            "Detailed": " Please provide a comprehensive and detailed explanation.",
+            "Standard": ""
+        }.get(mode, "")
 
-            # Generate response
-            with st.spinner("Analyzing policy..."):
-                response = ask_gemini(user_query + additional_prompt, credit_policy_text)
+        with st.spinner("✨ Analyzing policy..."):
+            response = ask_gemini(user_query + additional_prompt, credit_policy_text)
 
-            # Add bot response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
 
-            # Refresh chat
-            st.rerun()
-
-# Run the Streamlit App
 if __name__ == "__main__":
     main()
-   
